@@ -4,4 +4,5 @@
 
 ## To do list
 
-- 미정
+- stretch값 조정
+- 다른 item 추가, 초기화 설정하기
