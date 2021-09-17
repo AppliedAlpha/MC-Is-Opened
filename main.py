@@ -1,6 +1,7 @@
 import sys
-# from PyQt5.QtWidgets import QApplication, QPushButton, QWidget, QDesktopWidget, QGridLayout, QLabel, QLineEdit
-# from PyQt5.QtGui import QIcon
+import traceback
+import requests
+
 from PyQt5.Qt import *
 
 
@@ -18,6 +19,7 @@ class MCIsOpenedApp(QWidget):
 
         self.address_text = QLineEdit()
         self.port_text = QLineEdit()
+        self.port_text.setPlaceholderText('25565')
         self.motd_text = QLineEdit()  # readOnly
 
         self.reset_button = QPushButton('초기화')
@@ -25,7 +27,7 @@ class MCIsOpenedApp(QWidget):
 
         # 호출해서 초기화
         self.initCenter()
-        # self.initItems()
+        self.initItems()
         self.initLayout()
         self.initUI()
 
@@ -38,6 +40,17 @@ class MCIsOpenedApp(QWidget):
     def initLayout(self):
         grid = QGridLayout()
         self.setLayout(grid)
+
+        grid.setRowStretch(0, 2)
+        grid.setRowStretch(1, 1)
+        grid.setRowStretch(2, 1)
+        grid.setRowStretch(3, 1)
+        grid.setRowStretch(4, 1)
+
+        grid.setColumnStretch(0, 1)
+        grid.setColumnStretch(1, 1)
+        grid.setColumnStretch(2, 1)
+        grid.setColumnStretch(3, 1)
 
         # (세로 idx, 가로 idx, 세로 span, 가로 span)
         grid.addWidget(self.title_label, 0, 0, 1, -1, alignment=Qt.AlignCenter)
@@ -54,11 +67,51 @@ class MCIsOpenedApp(QWidget):
         grid.addWidget(self.reset_button, 1, 3)
         grid.addWidget(self.run_button, 2, 3)
 
+    def initItems(self):
+        self.reset_button.clicked.connect(self.reset)
+        self.run_button.clicked.connect(self.run)
+
     def initUI(self):
         self.setWindowTitle('MC IS OPENED?')
         self.setWindowIcon(QIcon('Sprites/icon.png'))
         self.resize(720, 360)
         self.show()
+
+    # 오류창 함수
+    def raise_error_box(self, errmsg):
+        msg = QMessageBox()
+        msg.setWindowTitle('ERROR!')
+        msg.setText(errmsg)
+        msg.setIcon(QMessageBox.Critical)
+        msg.exec_()
+
+    # 실행되는 함수
+    def reset(self):
+        self.address_text.setText('')
+        self.port_text.setText('')
+
+    def run(self):
+        port = self.port_text.text().strip() != ''
+        url = f'https://mcapi.us/server/status?' \
+              f'ip={self.address_text.text().strip()}'
+        if port:
+            url += f'&port={self.port_text.text().strip()}'
+
+        print(url)
+        # res = requests.get(url)
+        res = None  # Temporary
+
+        try:
+            if res.status_code != 200:
+                errmsg = f'정보를 받아오는 데에 실패했습니다!\nStatus Code: {res.status_code}'
+                raise ConnectionError(errmsg)
+            else:
+                print(res.text)
+            # print(str(res.status_code) + " | " + res.text)
+
+        except:
+            errmsg = f'실행 중 다음과 같은 오류가 발생했습니다.:\n{traceback.format_exc().strip()}'
+            self.raise_error_box(errmsg)
 
 
 # 프로그램 실행
