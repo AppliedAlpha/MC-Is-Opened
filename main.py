@@ -1,6 +1,7 @@
 import sys
 import traceback
 import requests
+import json
 
 from PyQt5.Qt import *
 
@@ -20,7 +21,7 @@ class MCIsOpenedApp(QWidget):
         self.address_text = QLineEdit()
         self.port_text = QLineEdit()
         self.port_text.setPlaceholderText('25565')
-        self.motd_text = QLineEdit()  # readOnly
+        self.motd_text = QLineEdit()  # readOnly -> 수정 필요
 
         self.reset_button = QPushButton('초기화')
         self.run_button = QPushButton('실행하기')
@@ -90,6 +91,11 @@ class MCIsOpenedApp(QWidget):
         self.address_text.setText('')
         self.port_text.setText('')
 
+    def clear_info(self):
+        self.opened_label.setText('-')
+        self.count_label.setText('(-/-)')
+        self.motd_text.setText('')
+
     def run(self):
         port = self.port_text.text().strip() != ''
         url = f'https://mcapi.us/server/status?' \
@@ -97,21 +103,49 @@ class MCIsOpenedApp(QWidget):
         if port:
             url += f'&port={self.port_text.text().strip()}'
 
-        print(url)
-        # res = requests.get(url)
-        res = None  # Temporary
+        # print(url)
+        res = requests.get(url)
+        # res = None  # Temporary
 
         try:
             if res.status_code != 200:
                 errmsg = f'정보를 받아오는 데에 실패했습니다!\nStatus Code: {res.status_code}'
                 raise ConnectionError(errmsg)
-            else:
-                print(res.text)
+
+            # json(text) -> dict
+            res_dict = json.loads(res.text)
+            self.print_info(res_dict)
+
+            # print(res_json)
             # print(str(res.status_code) + " | " + res.text)
 
         except:
             errmsg = f'실행 중 다음과 같은 오류가 발생했습니다.:\n{traceback.format_exc().strip()}'
             self.raise_error_box(errmsg)
+
+    def print_info(self, res):
+        # 여기서 error을 raise하면 run / self.print_info(..)에서 걸려줌
+        err = res['error']
+        online = res['online']
+        motd = res['motd']
+        players = res['players']
+        ver = res['server']['name']  # 모두 해당인지 검증 필요
+        # print(err, online, motd, players, ver, sep='\n')
+
+        if err is not None:
+            raise RuntimeError('불러오는 중에 에러가 발생했습니다.')
+
+        opened = online is True and players['max'] != 0
+
+        self.clear_info()
+
+        if opened:
+            self.opened_label.setText(f'Opened ({ver})')
+            self.count_label.setText(f'({players["now"]}/{players["max"]})')
+            self.motd_text.setText(motd)
+
+        else:
+            self.opened_label.setText(f'Closed')
 
 
 # 프로그램 실행
